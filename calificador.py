@@ -48,6 +48,36 @@ def cargar_evaluaciones(preguntas:list[Pregunta]):
 
 obtener_datos_alumnos(ruta_base)
 print("Alumnos: ", alumnos)
+#------ CARGAR DATOS -------------
+
+
+
+#------- METODOS GENERALES --------
+def obtener_archivo_pregunta(alumno: Alumno, evaluacion:str, pregunta:str):
+    evaluaciones = alumno.get_evaluaciones()
+    existe_pregunta = False
+    nombre_archivo = ''
+    for eva in evaluaciones:
+        if eva.get_tipo() == evaluacion:
+            path_pregunta = os.path.join(ruta_base,alumno.get_nombre(), evaluacion)
+            archivos = os.listdir(path_pregunta)
+            for pregun in eva.get_preguntas():
+                
+                if (pregunta + ".py").lower() in pregun.get_archivo().lower() or (pregunta + ".ipynb").lower() in pregun.get_archivo().lower():
+                    for archivo in archivos:
+                        ruta_archivo = os.path.join(path_pregunta, archivo)
+                        if os.path.isfile(ruta_archivo):
+                            if evaluacion.lower() in ruta_archivo:
+                                nombre_archivo = os.path.basename(ruta_archivo)
+                    existe_pregunta = True
+    if existe_pregunta:
+
+        path_pregunta = os.path.join(ruta_base, alumno.get_nombre, evaluacion, )
+        return True, nombre_archivo
+    else:
+        return False, ""
+
+
 
 # -------- CALIFICAR -------------
 
@@ -83,13 +113,20 @@ def procesar_plagio(eval: str):
 
     for alumno in alumnos_copia:
         evaluaciones_alumno = alumno.get_evaluaciones()
+        tiene_eval = False
+        ruta_evaluacion = ''
         for evaluacion in evaluaciones_alumno:
-            if evaluacion == eval:
+            if evaluacion.get_tipo() == eval:
+                tiene_eval = True
+                ruta_evaluacion = os.path.join(ruta_base, eval)
+                alumnos_copia.pop(0)
+                break
+        if tiene_eval:
+            
+            for alumno2 in alumnos_copia:
+                resultado_similitud = obtener_similitud()
 
-                pass
-
-        archivo_pregunta
-        for i in len(alumnos_copia):
+        
 
 
 
