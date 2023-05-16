@@ -1,6 +1,6 @@
 [MASTER]
 
-disable = C0103, C0114, C0115, C0116, R0903, E1101, C0305, C0325
+disable = C0103, C0114, C0115, C0116, R0903, E1101, C0305, C0325, C0304, C0301, W1510
 #C0305: saltos de linea
 #C0325: uso inecesario de parentesis
 #

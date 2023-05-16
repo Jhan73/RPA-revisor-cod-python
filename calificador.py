@@ -2,6 +2,8 @@ import pyautogui as robot
 import os
 import time
 import json
+import nbformat
+from copy import copy
 
 import numpy as np
 import pandas as pd
@@ -20,9 +22,6 @@ from evaluacion import Evaluacion
 from alumno import Alumno
 from plagio import Plagio
 
-
-archivos = []
-rutas_archivos = []
 alumnos = []
 plagios = []
 ruta_base = ".\evaluaciones"
@@ -62,24 +61,49 @@ def obtener_archivo_pregunta(alumno: Alumno, evaluacion:str, pregunta:str):
     evaluaciones = alumno.get_evaluaciones()
     existe_pregunta = False
     nombre_archivo = ''
+    ruta_archivo=''
     for eva in evaluaciones:
         if eva.get_tipo() == evaluacion:
             path_pregunta = os.path.join(ruta_base,alumno.get_nombre(), evaluacion)
             archivos = os.listdir(path_pregunta)
             for pregun in eva.get_preguntas():
                 
-                if (pregunta + ".py").lower() in pregun.get_archivo().lower() or (pregunta + ".ipynb").lower() in pregun.get_archivo().lower():
+                if ((pregunta + ".py").lower() in pregun.get_archivo().lower()) or ((pregunta + ".ipynb").lower() in pregun.get_archivo().lower()):
                     for archivo in archivos:
                         ruta_archivo = os.path.join(path_pregunta, archivo)
                         if os.path.isfile(ruta_archivo):
-                            if evaluacion.lower() in ruta_archivo:
+                            if pregunta.lower() in ruta_archivo:
+                                print("ruta del archivo antes::::::",ruta_archivo)
                                 nombre_archivo = os.path.basename(ruta_archivo)
+                                print("Esto es el nombre: ", nombre_archivo)
                     existe_pregunta = True
     if existe_pregunta:
-        path_pregunta = os.path.join(ruta_base, alumno.get_nombre, evaluacion, )
-        return True, nombre_archivo
+        path_pregunta = os.path.join(ruta_base, alumno.get_nombre(), evaluacion, nombre_archivo)
+        print("se encontro el archivo ajajaja: ",path_pregunta)
+        print("ruta archivo: ", ruta_archivo)
+        return True,path_pregunta, nombre_archivo
     else:
-        return False, ""
+        print("Nose encontro el archivo pipi")
+        return False, "", ""
+
+def convert_notebook_a_python(ruta:str, archivo:str) -> str:
+    
+    ruta_archivo_ipynb = "./notebook.ipynb"
+
+    with open(ruta_archivo_ipynb, "r") as archivo:# Carga el archivo .ipynb
+        nb = nbformat.read(archivo, nbformat.NO_CONVERT)
+    
+    codigo_python = ""
+    for celda in nb.cells:# Convierte el notebook a código Python
+        if celda.cell_type == "code":
+            codigo_python += celda.source + "\n\n"
+
+    # Guarda el código Python en un archivo .py
+    """ruta_archivo_python = "./convertido.py"
+    with open(ruta_archivo_python, "w") as archivo:
+        archivo.write(codigo_python)"""
+    return codigo_python
+
 
 # -------- CALIFICAR ------------- 
 def obtener_calificacion(ruta: str, archivo: str):
@@ -152,15 +176,18 @@ def procesar_plagio(eval: str):
     alumnos_copia = alumnos.copy()
 
     for i in range(3):
-        for alumno_a  in alumnos_copia:
+        for alumno  in alumnos_copia:
             similitud = 0
-            existe_a, archivo_alumno_a = obtener_archivo_pregunta(alumno_a, eval, f"P{(i+1)}")
+            alumno_a = copy(alumno)
+            existe_a, archivo_alumno_a, _ = obtener_archivo_pregunta(alumno_a, eval, f"P{(i+1)}")
             if existe_a:
-                alumnos_copia.remove(alumno_a)
+                #alumnos_copia.remove(alumno_a)
                 plagio = Plagio()
                 for alumno_b in alumnos_copia:
-                    existe_b, archivo_alumno_b = obtener_archivo_pregunta(alumno_b, eval, f"P{(i+1)}")
+                    existe_b, archivo_alumno_b, _= obtener_archivo_pregunta(alumno_b, eval, f"P{(i+1)}")
                     if existe_b:
+                        print("Archivo: ->>>>>>", archivo_alumno_b)
+
                         similitud = obtener_similitud(archivo_alumno_a, archivo_alumno_b)
                         if similitud > 0.7:
                             plagio.alumnos.append(alumno_b.get_nombre())
@@ -177,7 +204,7 @@ def procesar_plagio(eval: str):
                 plagios.append(plagio)
 
 #----------- REPORTE ---------------------
-def obtener_reporte():
+def obtener_reporte_notas():
     global alumnos
     reporte_alumnos = []
     for alumno in alumnos:
@@ -199,32 +226,30 @@ def obtener_reporte():
         reporte_alumnos.append(reporte_nota_alumno)
     df = pd.json_normalize(reporte_alumnos)
     print(df)
+    ruta_archivo = 'E:/reporte-notas.xlsx' 
+    df.to_excel(ruta_archivo, index=False)
 
+def obtener_reporte_plagios():
+    global plagios
+    data = {
+        "alumnos": [plagio.get_alumnos() for plagio in plagios],
+        "evaluacion": [plagio.get_evaluacion() for plagio in plagios],
+        "pregunta":[plagio.get_pregunta() for plagio in plagios]
+    }
+    df = pd.DataFrame(data)
+    ruta_archivo = 'E:/reporte-plagios.xlsx'  
+    df.to_excel(ruta_archivo, index=False)
+#---------- AUTOMATIZACION ----------------
+def ejecutar_automatizar():
 
-
-
-
-
-
-
-
-
+    pass
+#---------- METODO MAIN ----------------------
 def main():
     cargar_datos()
-    """for alumno in alumnos:
-        print(alumno.get_nombre())
-        #print(json.dumps(alumno.__dict__))
-        print(len(alumno.get_evaluaciones()))
-        for eva in alumno.get_evaluaciones():
-            print(eva.get_tipo())
-            time.sleep(0.1)
-            for ejer in eva.get_preguntas():
-                print(ejer.get_archivo())"""
-    calificar_evaluacion()
-    obtener_reporte()
-    procesar_plagio('PC1')
-
-
+    #calificar_evaluacion()
+    procesar_plagio('PC2')
+    #obtener_reporte_notas()
+  
 if __name__ == '__main__':
     main()
     
