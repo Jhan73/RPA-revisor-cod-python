@@ -5,6 +5,7 @@ class Pregunta:
         self.calificacion = 0
         self.similitud = 0
         self.es_plagio = False
+        self.pregunta = ""
 
     def get_calificacion(self):
         return self.calificacion

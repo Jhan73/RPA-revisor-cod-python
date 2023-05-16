@@ -16,24 +16,25 @@ from difflib import SequenceMatcher
 from pregunta import Pregunta
 from evaluacion import Evaluacion
 from alumno import Alumno
+from plagio import Plagio
 
 
 archivos = []
 rutas_archivos = []
-alumnos = [Alumno]
+alumnos = []
 plagios = []
 ruta_base = "./evaluaciones"
 
 
-def obtener_datos_alumnos(ruta_base: str): #obtener todos los datos del alumno
+"""def obtener_datos_alumnos(ruta_base: str): #obtener todos los datos del alumno
                                             #nombre de los alumno
                                             #evaluaciones que rindio (PC1, PC2 ....)
     global alumnos
     archivos = os.listdir(ruta_base)
     alumnos = [nombre for nombre in archivos if os.path.isdir(os.path.join(ruta_base, nombre))]
-    """for nombre in archivos:
+    for nombre in archivos:
         if os.path.isdir(os.path.join(ruta_base, nombre)):
-            alumnos.append(nombre)"""
+            alumnos.append(nombre)
 
 def obtener_datos_evaluacion(ruta_evaluacion:str):#pregustas que realizo
                                 #nombre del archivo por pregunta
@@ -47,7 +48,7 @@ def cargar_evaluaciones(preguntas:list[Pregunta]):
 
 
 obtener_datos_alumnos(ruta_base)
-print("Alumnos: ", alumnos)
+print("Alumnos: ", alumnos)"""
 #------ CARGAR DATOS -------------
 
 
@@ -58,6 +59,7 @@ def obtener_archivo_pregunta(alumno: Alumno, evaluacion:str, pregunta:str):
     existe_pregunta = False
     nombre_archivo = ''
     for eva in evaluaciones:
+        print("tipo eva : ",eva.get_tipo())
         if eva.get_tipo() == evaluacion:
             path_pregunta = os.path.join(ruta_base,alumno.get_nombre(), evaluacion)
             archivos = os.listdir(path_pregunta)
@@ -71,7 +73,6 @@ def obtener_archivo_pregunta(alumno: Alumno, evaluacion:str, pregunta:str):
                                 nombre_archivo = os.path.basename(ruta_archivo)
                     existe_pregunta = True
     if existe_pregunta:
-
         path_pregunta = os.path.join(ruta_base, alumno.get_nombre, evaluacion, )
         return True, nombre_archivo
     else:
@@ -79,9 +80,18 @@ def obtener_archivo_pregunta(alumno: Alumno, evaluacion:str, pregunta:str):
 
 
 
-# -------- CALIFICAR -------------
+# -------- CALIFICAR ------------- 
+"""def calificar():
+    for alumno in alumnos:
+        if len(alumno.get_evaluaciones()) > 0:
+            for evaluacion in alumno.get_evaluaciones():
+                for pregunta in evaluacion.get_preguntas():
+                    ruta = os.path.join(pregunta.get_ruta(), pregunta.get_archivo())
+                    resultado = "python -m pylint " + ruta
+                    pregunta.set_calificacion(os.system(resultado))
 
 
+calificar()"""
 #-------- REVISAR PLAGIO ---------
 
 def procesar(text):# Preprocesamiento del texto
@@ -108,24 +118,33 @@ def obtener_similitud(archivo1: str, archivo2: str):# Resultado de similitud
 def procesar_plagio(eval: str):
     global alumnos
     global plagios
-    plagio_alumnos = []
     alumnos_copia = alumnos.copy()
 
-    for alumno in alumnos_copia:
-        evaluaciones_alumno = alumno.get_evaluaciones()
-        tiene_eval = False
-        ruta_evaluacion = ''
-        for evaluacion in evaluaciones_alumno:
-            if evaluacion.get_tipo() == eval:
-                tiene_eval = True
-                ruta_evaluacion = os.path.join(ruta_base, eval)
-                alumnos_copia.pop(0)
-                break
-        if tiene_eval:
-            
-            for alumno2 in alumnos_copia:
-                resultado_similitud = obtener_similitud()
+    for i in range(3):
+        for alumno_a  in alumnos_copia:
+            similitud = 0
+            existe_a, archivo_alumno_a = obtener_archivo_pregunta(alumno_a, eval, f"P{(i+1)}")
+            if existe_a:
+                alumnos_copia.remove(alumno_a)
+                for alumno_b in alumnos_copia:
+                    existe_b, archivo_alumno_b = obtener_archivo_pregunta(alumno_b, eval, f"P{(i+1)}")
+                    if existe_b:
+                        similitud = obtener_similitud(archivo_alumno_a, archivo_alumno_b)
+                        if similitud > 0.7:
+                            plagio = Plagio()
+                            plagio.alumnos.append(alumno_b.get_nombre)
+                            plagio.evaluacion = eval
+                            plagio.pregunta = f"P{i}"
+                            plagios.append(plagio)
+                            alumnos_copia.remove(alumno_b)
+            if similitud > 0.7:
+                plagio = Plagio()
+                plagio.alumnos.append(alumno_a.get_nombre)
+                plagio.evaluacion = eval
+                plagio.pregunta = f"P{i}"
+                plagios.append(plagio)
 
+procesar_plagio('PC1')
         
 
 
@@ -136,23 +155,10 @@ def procesar_plagio(eval: str):
 
 
 #-----------
-def calificar_evaluacion(preguntas: list[Pregunta]):
-    
-    for pregunta in preguntas:
-        pass
-    resultado = "python -m pylint " + 'ruta_evaluacion'
-    print("Resultado de evaluacion: ", resultado)
-    return  os.system(resultado)
-
-def verificar_plagio(evaluacion: Evaluacion, evaluaciones:list[dict:Evaluacion]):
-    en = evaluaciones[0]['PC1']
-    pass
- 
 
 def main():
     print("Main")
-    valor = calificar_evaluacion('"./evaluaciones/BALLENA ESPINOZA, MARCELO ALONSO/PC2/Ballena-Marcelo-PC2-P1.py"')
-    print("Valor del resultado: ",valor)
 
 if __name__ == '__main__':
     main()
+    

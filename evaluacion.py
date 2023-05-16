@@ -15,5 +15,5 @@ class Evaluacion:
     def get_calificacion(self):
         return self.calificacion
     
-    def set_calificacio(self, calificacion):
+    def set_calificacion(self, calificacion):
         self.calificacion = calificacion
