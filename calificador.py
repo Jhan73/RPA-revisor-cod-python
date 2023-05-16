@@ -87,9 +87,8 @@ def obtener_archivo_pregunta(alumno: Alumno, evaluacion:str, pregunta:str):
         return False, "", ""
 
 def convert_notebook_a_python(ruta:str, archivo:str) -> str:
-    
-    ruta_archivo_ipynb = "./notebook.ipynb"
-
+    #ruta_archivo_ipynb = "./notebook.ipynb"
+    ruta_archivo_ipynb = os.path.join(ruta,archivo)
     with open(ruta_archivo_ipynb, "r") as archivo:# Carga el archivo .ipynb
         nb = nbformat.read(archivo, nbformat.NO_CONVERT)
     
@@ -98,26 +97,22 @@ def convert_notebook_a_python(ruta:str, archivo:str) -> str:
         if celda.cell_type == "code":
             codigo_python += celda.source + "\n\n"
 
-    # Guarda el código Python en un archivo .py
-    """ruta_archivo_python = "./convertido.py"
+    ruta_archivo_python = "./convertido.py"
     with open(ruta_archivo_python, "w") as archivo:
-        archivo.write(codigo_python)"""
-    return codigo_python
+        archivo.write(codigo_python)
+    return ruta_archivo_python
 
 
 # -------- CALIFICAR ------------- 
 def obtener_calificacion(ruta: str, archivo: str):
-
-    """ruta = "./evaluaciones/Camac-Alexis-pc2-p1.py"
-    comado = "python -m pylint " + ruta
-    resultado = os.system(comado)"""
-    
-    #print("Resultado",resultado)
     ruta_archivo = os.path.join(ruta, archivo)
     print(ruta_archivo)
+    if ".ipynb" in archivo:
+        ruta_archivo = convert_notebook_a_python(ruta, archivo)
     resultado = subprocess.run(['pylint', ruta_archivo], capture_output=True, text=True)
     calificacion_linea = None
     calificacion = 0
+    
     for linea in resultado.stdout.splitlines():
         if "Your code has been rated at" in linea:
             calificacion_linea = linea
@@ -240,15 +235,49 @@ def obtener_reporte_plagios():
     ruta_archivo = 'E:/reporte-plagios.xlsx'  
     df.to_excel(ruta_archivo, index=False)
 #---------- AUTOMATIZACION ----------------
-def ejecutar_automatizar():
+def maximizar():
+    time.sleep(2)
+    robot.hotkey("alt","space")
+    time.sleep(0.2)
+    robot.typewrite("x")
 
-    pass
+def abrir(pos, click =1):
+    robot.moveTo(pos)
+    robot.click(clicks=click)
+
+def escribir(pos, text):
+    abrir(pos, 1)
+    robot.typewrite(text)
+
+def ejecutar_automatizar():
+    abrir((4258,19),1)
+    robot.hotkey("winleft","e")
+    time.sleep(1)
+    maximizar()
+    time.sleep(5)
+    escribir((2890,138),"E:")
+    robot.hotkey("enter")
+    time.sleep(2)
+    abrir((2860,384),2)
+    time.sleep(10)
+    maximizar()
+    abrir((2511,283),2)
+    time.sleep(0.5)
+    abrir((2511,400),1)
+    robot.hotkey("ctrl", "*")
+    time.sleep(0.5)
+    robot.hotkey("ctrl", "t")
+    time.sleep(1)
+    robot.hotkey("enter")
+
+
 #---------- METODO MAIN ----------------------
 def main():
-    cargar_datos()
+    #cargar_datos()
     #calificar_evaluacion()
-    procesar_plagio('PC2')
+    #procesar_plagio('PC2')
     #obtener_reporte_notas()
+    ejecutar_automatizar()
   
 if __name__ == '__main__':
     main()
