@@ -30,3 +30,4 @@ for  i in range(4):
       if matriz[i][j]!=0:
         print(f"Producto {j+1}: {matriz[i][j]}")
     print("")
+    

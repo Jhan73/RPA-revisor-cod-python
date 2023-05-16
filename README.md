@@ -8,3 +8,6 @@ en el shell de python ejecutar los comandos debajo, para obtener recursos para e
     nltk.download('punkt')
     nltk.download('stopwords')
 ```
+## obtencion de nota con pylint
+
+Este código busca la línea que contiene la calificación utilizando la frase "Your code has been rated at". Luego, se utiliza la expresión regular r"(\d+(\.\d+)?)\/10" para extraer la calificación numérica.

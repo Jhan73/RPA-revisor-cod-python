@@ -1,11 +1,14 @@
 import pyautogui as robot
 import os
 import time
+import json
 
 import numpy as np
 import pandas as pd
 
 from pylint.lint import Run
+import subprocess
+import re
 
 import nltk
 from nltk.tokenize import word_tokenize
@@ -23,77 +26,39 @@ archivos = []
 rutas_archivos = []
 alumnos = []
 plagios = []
-ruta_base = "./evaluaciones"
+ruta_base = ".\evaluaciones"
 
-
-"""def obtener_datos_alumnos(ruta_base: str): #obtener todos los datos del alumno
-                                            #nombre de los alumno
-                                            #evaluaciones que rindio (PC1, PC2 ....)
-    global alumnos
-    archivos = os.listdir(ruta_base)
-    alumnos = [nombre for nombre in archivos if os.path.isdir(os.path.join(ruta_base, nombre))]
-    for nombre in archivos:
-        if os.path.isdir(os.path.join(ruta_base, nombre)):
-            alumnos.append(nombre)
-
-def obtener_datos_evaluacion(ruta_evaluacion:str):#pregustas que realizo
-                                #nombre del archivo por pregunta
-                                
-    pass
-
-
-def cargar_evaluaciones(preguntas:list[Pregunta]):
-    pass
-
-
-
-obtener_datos_alumnos(ruta_base)
-print("Alumnos: ", alumnos)"""
 #------ CARGAR DATOS -------------
 def cargar_datos():
+    global alumnos
     archivos = os.listdir(ruta_base)
     list_alumnos = [nombre for nombre in archivos if os.path.isdir(os.path.join(ruta_base, nombre))]
     #nombre
     for alumno in list_alumnos:
         evaluaciones=[]
-        evaluacion=os.listdir(ruta_base+'/'+alumno)
+        list_evaluaciones=os.listdir(ruta_base+'/'+alumno)
         #evaluaciones que rindio
-        for examen in evaluacion:
-            preguntas=[]
-            ejercicios = os.path.join(ruta_base,alumno,examen)
-            nueva_evaluacion = None
-            for pregunta in ejercicios:
-                #ejercicios por pregunta
-                if ".py" in pregunta or ".ipynb" in pregunta:
-                    nueva_pregunta = Pregunta(ruta_base+'/'+alumno+'/'+examen,str(pregunta))
-                    preguntas.append(nueva_pregunta)
-                    #print(json.dumps(nueva_pregunta.__dict__))#######################
-                    if "pc1" in pregunta.lower():
-                        nueva_evaluacion = Evaluacion('PC1',ruta_base+'/'+alumno+'/'+examen,preguntas)
-                    elif "pc2" in pregunta.lower():
-                        nueva_evaluacion = Evaluacion('PC2',ruta_base+'/'+alumno+'/'+examen,preguntas)
-                    elif "pc3" in pregunta.lower():
-                        nueva_evaluacion = Evaluacion('PC3',ruta_base+'/'+alumno+'/'+examen,preguntas)
-                    elif "pc4" in pregunta.lower():
-                        nueva_evaluacion = Evaluacion('PC4',ruta_base+'/'+alumno+'/'+examen,preguntas)
-                    elif "ep" in pregunta.lower():
-                        nueva_evaluacion = Evaluacion('EP',ruta_base+'/'+alumno+'/'+examen,preguntas)
-                    elif "ef" in pregunta.lower():
-                        nueva_evaluacion = Evaluacion('EF',ruta_base+'/'+alumno+'/'+examen,preguntas)
-                    elif "es" in pregunta.lower():
-                        nueva_evaluacion = Evaluacion('ES',ruta_base+'/'+alumno+'/'+examen,preguntas)
-            evaluaciones.append(nueva_evaluacion)
-        alumnos.append(Alumno(alumno,ruta_base,evaluaciones))
-cargar_datos()
-
-
+        if len(list_evaluaciones) > 0:
+            for evaluacion in list_evaluaciones:
+                list_ejercicios = os.listdir(ruta_base+'/'+alumno+'/'+evaluacion)
+                nueva_evaluacion = None
+                if len(list_ejercicios) > 0:
+                    preguntas=[]
+                    for pregunta in list_ejercicios:
+                        #ejercicios por pregunta
+                        if ".py" in pregunta or ".ipynb" in pregunta:
+                            nueva_pregunta = Pregunta(os.path.join(ruta_base, alumno, evaluacion), pregunta)
+                            preguntas.append(nueva_pregunta)
+                            #print(json.dumps(nueva_pregunta.__dict__))#######################
+                    nueva_evaluacion = Evaluacion(evaluacion,ruta_base+'/'+alumno,preguntas)
+                    evaluaciones.append(nueva_evaluacion)
+            alumnos.append(Alumno(alumno,ruta_base,evaluaciones))
 #------- METODOS GENERALES --------
 def obtener_archivo_pregunta(alumno: Alumno, evaluacion:str, pregunta:str):
     evaluaciones = alumno.get_evaluaciones()
     existe_pregunta = False
     nombre_archivo = ''
     for eva in evaluaciones:
-        print("tipo eva : ",eva.get_tipo())
         if eva.get_tipo() == evaluacion:
             path_pregunta = os.path.join(ruta_base,alumno.get_nombre(), evaluacion)
             archivos = os.listdir(path_pregunta)
@@ -115,17 +80,33 @@ def obtener_archivo_pregunta(alumno: Alumno, evaluacion:str, pregunta:str):
 
 
 # -------- CALIFICAR ------------- 
-"""def calificar():
-    for alumno in alumnos:
-        if len(alumno.get_evaluaciones()) > 0:
-            for evaluacion in alumno.get_evaluaciones():
-                for pregunta in evaluacion.get_preguntas():
-                    ruta = os.path.join(pregunta.get_ruta(), pregunta.get_archivo())
-                    resultado = "python -m pylint " + ruta
-                    pregunta.set_calificacion(os.system(resultado))
+def obtener_calificacion(ruta_archivo: str):
 
+    """ruta = "./evaluaciones/Camac-Alexis-pc2-p1.py"
+    comado = "python -m pylint " + ruta
+    resultado = os.system(comado)"""
+    #print("Resultado",resultado)
 
-calificar()"""
+    resultado = subprocess.run(['pylint', ruta_archivo], capture_output=True, text=True)
+    calificacion_linea = None
+    for linea in resultado.stdout.splitlines():
+        if "Your code has been rated at" in linea:
+            calificacion_linea = linea
+            break
+
+    if calificacion_linea:
+        calificacion_match = re.search(r"(\d+(\.\d+)?)\/10", calificacion_linea)
+        if calificacion_match:
+            calificacion_str = calificacion_match.group(1)
+            calificacion = float(calificacion_str)
+            print(f"Calificación de Pylint: {calificacion}")
+        else:
+            print("No se encontró una calificación válida en la salida de Pylint.")
+    else:
+        print("No se encontró una línea de calificación en la salida de Pylint.")
+
+    return calificacion
+
 #-------- REVISAR PLAGIO ---------
 
 def procesar(text):# Preprocesamiento del texto
@@ -166,19 +147,18 @@ def procesar_plagio(eval: str):
                         similitud = obtener_similitud(archivo_alumno_a, archivo_alumno_b)
                         if similitud > 0.7:
                             plagio = Plagio()
-                            plagio.alumnos.append(alumno_b.get_nombre)
+                            plagio.alumnos.append(alumno_b.get_nombre())
                             plagio.evaluacion = eval
                             plagio.pregunta = f"P{i}"
                             plagios.append(plagio)
                             alumnos_copia.remove(alumno_b)
             if similitud > 0.7:
                 plagio = Plagio()
-                plagio.alumnos.append(alumno_a.get_nombre)
+                plagio.alumnos.append(alumno_a.get_nombre())
                 plagio.evaluacion = eval
                 plagio.pregunta = f"P{i}"
                 plagios.append(plagio)
 
-procesar_plagio('PC1')
         
 
 
@@ -191,7 +171,18 @@ procesar_plagio('PC1')
 #-----------
 
 def main():
-    print("Main")
+    cargar_datos()
+    """for alumno in alumnos:
+        print(alumno.get_nombre())
+        #print(json.dumps(alumno.__dict__))
+        print(len(alumno.get_evaluaciones()))
+        for eva in alumno.get_evaluaciones():
+            print(eva.get_tipo())
+            time.sleep(0.1)
+            for ejer in eva.get_preguntas():
+                print(ejer.get_archivo())"""
+    obtener_calificacion()
+    procesar_plagio('PC1')
 
 if __name__ == '__main__':
     main()
