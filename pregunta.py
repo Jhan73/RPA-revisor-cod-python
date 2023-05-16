@@ -1,11 +1,11 @@
 class Pregunta:
-    def __init__(self, ruta_archivo: str, archivo:str) -> None:
+    def __init__(self, ruta_archivo: str, archivo:str, pregunta: str) -> None:
         self.ruta_archivo = ruta_archivo
         self.archivo = archivo
         self.calificacion = 0
         self.similitud = 0
         self.es_plagio = False
-        self.pregunta = ""
+        self.pregunta = pregunta
 
     def get_calificacion(self):
         return self.calificacion
@@ -17,6 +17,8 @@ class Pregunta:
         return self.similitud
     def get_es_plagio(self):
         return self.es_plagio
+    def get_pregunta(self):
+        return self.pregunta
     
     def set_calificacion(self, calificacion):
         self.calificacion = calificacion

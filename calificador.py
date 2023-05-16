@@ -6,7 +6,6 @@ import json
 import numpy as np
 import pandas as pd
 
-from pylint.lint import Run
 import subprocess
 import re
 
@@ -47,7 +46,12 @@ def cargar_datos():
                     for pregunta in list_ejercicios:
                         #ejercicios por pregunta
                         if ".py" in pregunta or ".ipynb" in pregunta:
-                            nueva_pregunta = Pregunta(os.path.join(ruta_base, alumno, evaluacion), pregunta)
+                            num_pregunta = ""
+                            if ".py" in pregunta:
+                                num_pregunta = f"p{list(pregunta)[-4]}"
+                            else:
+                                num_pregunta = f"p{list(pregunta)[-7]}"
+                            nueva_pregunta = Pregunta(os.path.join(ruta_base, alumno, evaluacion), pregunta, num_pregunta)
                             preguntas.append(nueva_pregunta)
                             #print(json.dumps(nueva_pregunta.__dict__))#######################
                     nueva_evaluacion = Evaluacion(evaluacion,ruta_base+'/'+alumno,preguntas)
@@ -77,18 +81,19 @@ def obtener_archivo_pregunta(alumno: Alumno, evaluacion:str, pregunta:str):
     else:
         return False, ""
 
-
-
 # -------- CALIFICAR ------------- 
-def obtener_calificacion(ruta_archivo: str):
+def obtener_calificacion(ruta: str, archivo: str):
 
     """ruta = "./evaluaciones/Camac-Alexis-pc2-p1.py"
     comado = "python -m pylint " + ruta
     resultado = os.system(comado)"""
+    
     #print("Resultado",resultado)
-
+    ruta_archivo = os.path.join(ruta, archivo)
+    print(ruta_archivo)
     resultado = subprocess.run(['pylint', ruta_archivo], capture_output=True, text=True)
     calificacion_linea = None
+    calificacion = 0
     for linea in resultado.stdout.splitlines():
         if "Your code has been rated at" in linea:
             calificacion_linea = linea
@@ -99,13 +104,24 @@ def obtener_calificacion(ruta_archivo: str):
         if calificacion_match:
             calificacion_str = calificacion_match.group(1)
             calificacion = float(calificacion_str)
-            print(f"Calificación de Pylint: {calificacion}")
+            #print(f"Calificación de Pylint: {calificacion}")
         else:
             print("No se encontró una calificación válida en la salida de Pylint.")
     else:
         print("No se encontró una línea de calificación en la salida de Pylint.")
 
     return calificacion
+def calificar_evaluacion():
+    for alumno in alumnos:
+        for eva in alumno.get_evaluaciones():
+            calificacion_eva = 0
+            for ejer in eva.get_preguntas():
+                time.sleep(0.1)
+                calificacion = obtener_calificacion(ejer.get_ruta_archivo(), ejer.get_archivo())
+                ejer.set_calificacion(calificacion*10)
+                calificacion_eva += calificacion
+            calificacion_eva = calificacion_eva/len(eva.get_preguntas())
+            eva.set_calificacion(calificacion_eva)
 
 #-------- REVISAR PLAGIO ---------
 
@@ -141,17 +157,18 @@ def procesar_plagio(eval: str):
             existe_a, archivo_alumno_a = obtener_archivo_pregunta(alumno_a, eval, f"P{(i+1)}")
             if existe_a:
                 alumnos_copia.remove(alumno_a)
+                plagio = Plagio()
                 for alumno_b in alumnos_copia:
                     existe_b, archivo_alumno_b = obtener_archivo_pregunta(alumno_b, eval, f"P{(i+1)}")
                     if existe_b:
                         similitud = obtener_similitud(archivo_alumno_a, archivo_alumno_b)
                         if similitud > 0.7:
-                            plagio = Plagio()
                             plagio.alumnos.append(alumno_b.get_nombre())
-                            plagio.evaluacion = eval
-                            plagio.pregunta = f"P{i}"
-                            plagios.append(plagio)
                             alumnos_copia.remove(alumno_b)
+                if similitud > 0.7:
+                    plagio.evaluacion = eval
+                    plagio.pregunta = f"P{i}"
+                    plagios.append(plagio)  
             if similitud > 0.7:
                 plagio = Plagio()
                 plagio.alumnos.append(alumno_a.get_nombre())
@@ -159,7 +176,29 @@ def procesar_plagio(eval: str):
                 plagio.pregunta = f"P{i}"
                 plagios.append(plagio)
 
-        
+#----------- REPORTE ---------------------
+def obtener_reporte():
+    global alumnos
+    reporte_alumnos = []
+    for alumno in alumnos:
+        reporte_nota_alumno = {
+            "alumno":"",
+            "PC1":{"p1":0,"p2":0,"p3":0,},
+            "PC1":{"p1":0,"p2":0,"p3":0,},
+            "PC2":{"p1":0,"p2":0,"p3":0,},
+            "PC3":{"p1":0,"p2":0,"p3":0,},
+            "PC4":{"p1":0,"p2":0,"p3":0,},
+            "EP":{"p1":0,"p2":0,"p3":0,},
+            "EF":{"p1":0,"p2":0,"p3":0,},
+            "ES":{"p1":0,"p2":0,"p3":0,},
+        }
+        reporte_nota_alumno["alumno"] = alumno.get_nombre()
+        for eva in alumno.get_evaluaciones():
+            for ejer in eva.get_preguntas():
+                reporte_nota_alumno[eva.get_tipo()][ejer.get_pregunta()] = ejer.get_calificacion()
+        reporte_alumnos.append(reporte_nota_alumno)
+    df = pd.json_normalize(reporte_alumnos)
+    print(df)
 
 
 
@@ -168,7 +207,7 @@ def procesar_plagio(eval: str):
 
 
 
-#-----------
+
 
 def main():
     cargar_datos()
@@ -181,8 +220,10 @@ def main():
             time.sleep(0.1)
             for ejer in eva.get_preguntas():
                 print(ejer.get_archivo())"""
-    obtener_calificacion()
+    calificar_evaluacion()
+    obtener_reporte()
     procesar_plagio('PC1')
+
 
 if __name__ == '__main__':
     main()
